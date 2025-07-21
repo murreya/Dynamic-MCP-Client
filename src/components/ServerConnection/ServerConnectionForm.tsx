@@ -3,8 +3,10 @@ import { Button } from '../common/Button'
 import { Input } from '../common/Input'
 import { Select } from '../common/Select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../common/Card'
+import { AuthenticationForm } from '../Auth/AuthenticationForm'
 import { useMCPClient } from '../../hooks/useMCPClient'
-import { Plus } from 'lucide-react'
+import { Plus, Settings } from 'lucide-react'
+import type { MCPAuthentication } from '../../types/mcp'
 
 export function ServerConnectionForm() {
   const { addAndConnectServer } = useMCPClient()
@@ -13,7 +15,9 @@ export function ServerConnectionForm() {
     name: '',
     url: '',
     transport: 'sse' as 'sse' | 'websocket',
+    authentication: undefined as MCPAuthentication | undefined,
   })
+  const [showAuthForm, setShowAuthForm] = useState(false)
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +33,7 @@ export function ServerConnectionForm() {
         name: formData.name,
         url: formData.url,
         transport: formData.transport,
+        authentication: formData.authentication,
       })
       
       // Reset form
@@ -36,7 +41,9 @@ export function ServerConnectionForm() {
         name: '',
         url: '',
         transport: 'sse',
+        authentication: undefined,
       })
+      setShowAuthForm(false)
     } catch (error) {
       console.error('Failed to add server:', error)
     } finally {
@@ -96,11 +103,43 @@ export function ServerConnectionForm() {
             </Select>
           </div>
           
-          <Button type="submit" disabled={isAdding || !formData.name || !formData.url}>
-            <Plus className="h-4 w-4 mr-2" />
-            {isAdding ? 'Connecting...' : 'Add Server'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => setShowAuthForm(!showAuthForm)}
+              disabled={isAdding}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {formData.authentication?.type && formData.authentication.type !== 'none' 
+                ? `Auth: ${formData.authentication.type}` 
+                : 'Configure Auth'
+              }
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isAdding || !formData.name || !formData.url}
+              className="flex-1"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {isAdding ? 'Connecting...' : 'Add Server'}
+            </Button>
+          </div>
         </form>
+        
+        {showAuthForm && (
+          <div className="mt-6 pt-6 border-t">
+            <AuthenticationForm
+              authentication={formData.authentication}
+              serverUrl={formData.url}
+              onSave={(auth) => {
+                setFormData({ ...formData, authentication: auth })
+                setShowAuthForm(false)
+              }}
+              onCancel={() => setShowAuthForm(false)}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   )
